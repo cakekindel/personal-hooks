@@ -1,0 +1,32 @@
+org: 'orionpersonal'
+app: 'hooks'
+service: 'hooks'
+
+plugins:
+ - 'serverless-rust'
+ - 'serverless-offline'
+
+provider:
+  name: 'aws'
+  runtime: 'rust'
+  environment:
+    STAGE: ${opt:stage}
+
+package:
+  individually: true
+
+custom:
+  rust:
+    dockerless: true
+
+  serverless-offline:
+    noPrependStageInUrl: true
+
+functions:
+  hooks:
+    handler: hooks_lambda
+    events:
+      - http:
+          method: 'POST'
+          path: '/run'
+      - schedule: 'rate(1 hour)'

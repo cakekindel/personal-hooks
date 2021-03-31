@@ -1,0 +1,19 @@
+{
+  "name": "personal-hooks",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cakekindel/personal-hooks.git"
+  },
+  "author": "Orion Kindel <orionkindel@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cakekindel/personal-hooks/issues"
+  },
+  "homepage": "https://github.com/cakekindel/personal-hooks#readme",
+  "devDependencies": {
+    "serverless": "^2.31.0",
+    "serverless-offline": "^6.9.0",
+    "serverless-rust": "^0.3.8"
+  }
+}
