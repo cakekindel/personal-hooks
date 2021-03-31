@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 
-use crate::event::*;
+pub mod event;
+
+use event::*;
 
 trait Calendar {
   type Error;

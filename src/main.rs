@@ -5,12 +5,12 @@ use serde_json::Value;
 
 mod app;
 mod calendar;
-mod event;
 mod integrate;
 mod lamb;
+mod notify;
 mod utils;
 
-use app::{StaticMutState, App, State};
+use app::{App, StaticMutState};
 use utils::*;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync>;
@@ -32,18 +32,20 @@ async fn main(event_raw: Value, _: Context) -> Result<Value, AnyError> {
 mod handle {
   use serde_json::Value;
 
-  use crate::{lamb, utils::*, app};
+  use crate::{app, lamb, utils::*};
 
   pub fn noop() -> Result<Value, crate::AnyError> {
     serde_json::to_value(()).norm()
   }
 
-  pub fn jobs(state: impl app::State) -> Result<Value, crate::AnyError> {
+  pub fn jobs(state: impl app::ReadState) -> Result<Value, crate::AnyError> {
     println!("when the scheduled execution hits");
     serde_json::to_value(()).norm()
   }
 
-  pub fn http(state: impl app::State, req: lamb::HttpRequest) -> Result<Value, crate::AnyError> {
+  pub fn http(state: impl app::ReadState,
+              req: lamb::HttpRequest)
+              -> Result<Value, crate::AnyError> {
     let mut headers = std::collections::HashMap::<String, String>::new();
 
     let res = lamb::HttpResponse { status:  200,
