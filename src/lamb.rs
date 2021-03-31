@@ -8,13 +8,19 @@ type Object = HashMap<String, String>;
 #[serde(untagged)]
 pub enum Event {
   Http(HttpRequest),
-  Schedule,
+  Schedule { kind: ScheduleKind },
 }
 
 impl Event {
-  pub fn from_value(val: serde_json::Value) -> Self {
-    serde_json::from_value::<Self>(val).unwrap_or(Self::Schedule)
+  pub fn from_value(val: serde_json::Value) -> serde_json::Result<Self> {
+    serde_json::from_value::<Self>(val)
   }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum ScheduleKind {
+  KeepWarm,
+  RunJobs,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

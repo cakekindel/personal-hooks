@@ -27,6 +27,11 @@ functions:
     handler: hooks_lambda
     events:
       - http:
-          method: 'POST'
-          path: '/run'
-      - schedule: 'rate(1 hour)'
+          method: '*'
+          path: '*'
+      - schedule:
+          rate: 'rate(30 minutes)'
+          input: {kind: 'RunJobs'}
+      - schedule:
+          rate: 'rate(5 minutes)'
+          input: {kind: 'KeepWarm'}
