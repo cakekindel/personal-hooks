@@ -1,3 +1,51 @@
+pub trait Monad<A, B>
+  where Self: Sized
+{
+  type Out;
+  fn bind(self, f: impl FnOnce(A) -> Self::Out) -> Self::Out;
+}
+
+pub trait Functor<A, B> {
+  type Out;
+  fn fmap(self, f: impl FnOnce(A) -> B) -> Self::Out;
+}
+
+pub trait BiFunctor<A1, A2, B1, B2> {
+  type Out;
+  fn bi_map(self,
+            f1: impl FnOnce(A1) -> B1,
+            f2: impl FnOnce(A2) -> B2)
+            -> Self::Out;
+}
+
+impl<A, B, E> Monad<A, B> for Result<A, E> {
+  type Out = Result<B, E>;
+  fn bind(self, f: impl FnOnce(A) -> Self::Out) -> Self::Out {
+    self.and_then(f)
+  }
+}
+
+impl<A, B> Monad<A, B> for Option<A> {
+  type Out = Option<B>;
+  fn bind(self, f: impl FnOnce(A) -> Self::Out) -> Self::Out {
+    self.and_then(f)
+  }
+}
+
+impl<A, B, E> Functor<A, B> for Result<A, E> {
+  type Out = Result<B, E>;
+  fn fmap(self, f: impl FnOnce(A) -> B) -> Self::Out {
+    self.map(f)
+  }
+}
+
+impl<A, B> Functor<A, B> for Option<A> {
+  type Out = Option<B>;
+  fn fmap(self, f: impl FnOnce(A) -> B) -> Self::Out {
+    self.map(f)
+  }
+}
+
 pub trait NormalizeResult<T> {
   fn norm(self) -> Result<T, crate::AnyError>;
 }

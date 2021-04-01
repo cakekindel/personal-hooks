@@ -24,7 +24,7 @@ async fn main(event_raw: Value, _: Context) -> Result<Value, AnyError> {
 
   match event {
     | Http(req) => handle::http(StaticMutState, req),
-    | Schedule { kind: RunJobs } => handle::jobs(StaticMutState),
+    | Schedule { kind: RunJobs } => handle::jobs(StaticMutState).await,
     | _ => handle::noop(),
   }
 }
@@ -38,8 +38,15 @@ mod handle {
     serde_json::to_value(()).norm()
   }
 
-  pub fn jobs(state: impl app::ReadState) -> Result<Value, crate::AnyError> {
-    println!("when the scheduled execution hits");
+  pub async fn jobs(state: impl app::ReadState + app::ModifyState)
+                    -> Result<Value, crate::AnyError> {
+    state.modify_async(|mut s| async {
+           s.integrate_ad_auth =
+             s.integrate_ad_auth.authenticate(&s.reqw).await?;
+           Ok(s)
+         })
+         .await?;
+
     serde_json::to_value(()).norm()
   }
 
