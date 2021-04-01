@@ -3,7 +3,7 @@ use std::{env, future::Future, marker::Send};
 use async_trait::async_trait;
 use thiserror::Error as DeriveError;
 
-use crate::{integrate, utils::*};
+use crate::{integrate, notify::Notifier, utils::*};
 
 #[derive(Debug, DeriveError)]
 pub enum Error {
@@ -15,6 +15,9 @@ pub enum Error {
 
   #[error("{0}")]
   Any(crate::AnyError),
+
+  #[error("{0:?}")]
+  Many(Vec<crate::AnyError>),
 }
 
 // EXPLAIN MUT STATIC: want persistent app state across / between executions.
@@ -22,9 +25,12 @@ static mut APP_STATE: Option<App> = None;
 
 pub(super) struct StaticMutState;
 
+pub trait DebugNotifier: Notifier + std::fmt::Debug + Sync + Send {}
+
 #[derive(Debug)]
 pub struct App {
   pub reqw:                   reqwest::Client,
+  pub notifiers:              Vec<Box<dyn DebugNotifier>>,
   pub integrate_ad_client_id: String,
   pub pushbullet_token:       String,
   pub integrate_ad_auth:      integrate::ad::Auth,
@@ -116,6 +122,7 @@ impl StaticMutState {
                                        graph_base_url: String::new(), };
 
     let mut state = App { reqw:                   reqwest::Client::new(),
+                          notifiers:              vec![],
                           integrate_ad_client_id: String::new(),
                           pushbullet_token:       String::new(),
                           integrate_ad_auth:      auth_empty, };

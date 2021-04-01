@@ -80,6 +80,32 @@ impl<T> Tap<T> for Option<T> {
   }
 }
 
+pub trait TapErr<E> {
+  fn tap_err(self, action: impl FnOnce(&E) -> ()) -> Self;
+}
+
+impl<T, E> TapErr<E> for Result<T, E> {
+  fn tap_err(self, action: impl FnOnce(&E) -> ()) -> Self {
+    self.map_err(|v| {
+          action(&v);
+          v
+        })
+  }
+}
+
+pub trait TapErrMut<E> {
+  fn tap_err_mut(self, action: impl FnOnce(&mut E) -> ()) -> Self;
+}
+
+impl<T, E> TapErrMut<E> for Result<T, E> {
+  fn tap_err_mut(self, action: impl FnOnce(&mut E) -> ()) -> Self {
+    self.map_err(|mut v| {
+          action(&mut v);
+          v
+        })
+  }
+}
+
 pub trait TapMut<T> {
   fn tap_mut(self, action: impl FnMut(&mut T) -> ()) -> Self;
 }

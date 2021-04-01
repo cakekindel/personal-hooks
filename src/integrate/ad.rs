@@ -18,6 +18,7 @@ pub enum Auth {
     graph_base_url: String,
   },
   WaitForCodeAuth {
+    message:        String,
     my_code:        String,
     user_code:      String,
     url:            String,
@@ -37,6 +38,13 @@ pub enum Auth {
 }
 
 impl Auth {
+  pub fn wait_msg(&self) -> Option<&str> {
+    match self {
+      | Self::WaitForCodeAuth { message, .. } => Some(message),
+      | _ => None,
+    }
+  }
+
   pub async fn authenticate(self,
                             reqw: &reqwest::Client)
                             -> Result<Self, Error> {
@@ -124,6 +132,7 @@ impl Auth {
                                login_base_url: login_base_url.to_string(),
                                graph_base_url: graph_base_url.to_string(),
                                my_code:        code.device_code,
+                               message:        code.message,
                                user_code:      code.user_code,
                                url:            code.verification_uri, })
   }
@@ -264,6 +273,7 @@ struct RefreshResponse {
 
 #[derive(Deserialize)]
 struct CodeResponse {
+  pub message:          String,
   pub device_code:      String,
   pub user_code:        String,
   pub verification_uri: String,
