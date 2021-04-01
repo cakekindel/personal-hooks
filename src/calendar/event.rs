@@ -4,11 +4,11 @@ use chrono::{DateTime, Utc};
 
 #[derive(Debug, PartialEq)]
 pub struct Event {
-  pub cat: Cat,
-  pub what: String,
-  pub when: DateTime<Utc>,
+  pub cat:    Cat,
+  pub what:   String,
+  pub when:   DateTime<Utc>,
   pub where_: DateTime<Utc>,
-  pub who: String,
+  pub who:    String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -36,15 +36,11 @@ pub enum Personal {
 
 impl fmt::Display for Personal {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(
-      f,
-      "{}",
-      match self {
-        | Self::Chore => "Chore",
-        | Self::Habit => "Habit",
-        | Self::Plan => "Plan",
-        | Self::Med => "Medical",
-      }
-    )
+    write!(f, "{}", match self {
+      | Self::Chore => "Chore",
+      | Self::Habit => "Habit",
+      | Self::Plan => "Plan",
+      | Self::Med => "Medical",
+    })
   }
 }

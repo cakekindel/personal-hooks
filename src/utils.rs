@@ -1,6 +1,5 @@
 pub trait Monad<A, B>
-where
-  Self: Sized,
+  where Self: Sized
 {
   type Out;
   fn bind(self, f: impl FnOnce(A) -> Self::Out) -> Self::Out;
@@ -13,11 +12,10 @@ pub trait Functor<A, B> {
 
 pub trait BiFunctor<A1, A2, B1, B2> {
   type Out;
-  fn bi_map(
-    self,
-    f1: impl FnOnce(A1) -> B1,
-    f2: impl FnOnce(A2) -> B2,
-  ) -> Self::Out;
+  fn bi_map(self,
+            f1: impl FnOnce(A1) -> B1,
+            f2: impl FnOnce(A2) -> B2)
+            -> Self::Out;
 }
 
 impl<A, B, E> Monad<A, B> for Result<A, E> {
@@ -67,18 +65,18 @@ pub trait Tap<T> {
 impl<T, E> Tap<T> for Result<T, E> {
   fn tap(self, action: impl FnOnce(&T) -> ()) -> Self {
     self.map(|v| {
-      action(&v);
-      v
-    })
+          action(&v);
+          v
+        })
   }
 }
 
 impl<T> Tap<T> for Option<T> {
   fn tap(self, action: impl FnOnce(&T) -> ()) -> Self {
     self.map(|v| {
-      action(&v);
-      v
-    })
+          action(&v);
+          v
+        })
   }
 }
 
@@ -89,17 +87,17 @@ pub trait TapMut<T> {
 impl<T, E> TapMut<T> for Result<T, E> {
   fn tap_mut(self, mut action: impl FnMut(&mut T) -> ()) -> Self {
     self.map(|mut v| {
-      action(&mut v);
-      v
-    })
+          action(&mut v);
+          v
+        })
   }
 }
 
 impl<T> TapMut<T> for Option<T> {
   fn tap_mut(self, action: impl FnOnce(&mut T) -> ()) -> Self {
     self.map(|mut v| {
-      action(&mut v);
-      v
-    })
+          action(&mut v);
+          v
+        })
   }
 }
