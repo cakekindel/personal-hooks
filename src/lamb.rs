@@ -41,9 +41,9 @@ pub struct HttpRequest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HttpResponse {
   #[serde(rename = "statusCode")]
-  pub status:  i32,
+  pub status: i32,
   pub headers: Option<Object>,
-  pub body:    Option<String>,
+  pub body: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
