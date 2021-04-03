@@ -37,8 +37,7 @@ pub struct App {
 }
 
 impl App {
-  pub async fn notify_all(&self, msg: &str)
-                          -> Result<(), AnyError> {
+  pub async fn notify_all(&self, msg: &str) -> Result<(), AnyError> {
     use futures::stream;
     use stream::StreamExt;
 
@@ -55,11 +54,14 @@ impl App {
       }.map_err(self::Error::Many)
     };
 
-    futures::stream::iter(&self.notifiers)
-         .then(|ns| async move { ns.notify(msg).await })
-         .fold(Ok(()), |acc, res| async { aggregate_errors(acc, res) })
-         .await
-         .norm()
+    futures::stream::iter(&self.notifiers).then(|ns| async move {
+                                            ns.notify(msg).await
+                                          })
+                                          .fold(Ok(()), |acc, res| async {
+                                            aggregate_errors(acc, res)
+                                          })
+                                          .await
+                                          .norm()
   }
 }
 
@@ -78,8 +80,7 @@ pub trait ModifyState
             -> Result<(), Error>;
 
   /// this is a monstrosity
-  async fn modify_async<'a,
-                          R: Send + Future<Output = Result<App, AnyError>>>(
+  async fn modify_async<'a, R: Send + Future<Output = Result<App, AnyError>>>(
     &'a self,
     f: impl 'a + Send + FnOnce(App) -> R)
     -> Result<(), Error>;
@@ -114,8 +115,7 @@ impl ModifyState for StaticMutState {
   }
 
   async fn modify_async<'a,
-                          R: Send
-                            + Future<Output = Result<App, AnyError>>>(
+                          R: Send + Future<Output = Result<App, AnyError>>>(
     &'a self,
     f: impl 'a + Send + FnOnce(App) -> R)
     -> Result<(), Error> {

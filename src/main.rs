@@ -8,7 +8,7 @@ mod lamb;
 mod notify;
 mod utils;
 
-use app::{StaticMutState, ReadState};
+use app::{ReadState, StaticMutState};
 use utils::*;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -27,7 +27,10 @@ async fn main(event_raw: Value, _: Context) -> Result<Value, AnyError> {
   };
 
   if let Err(err) = handle_result {
-    StaticMutState.read()?.notify_all(&format!("{}", err)).await.and_then(|_| handle::noop())
+    StaticMutState.read()?
+                  .notify_all(&format!("{}", err))
+                  .await
+                  .and_then(|_| handle::noop())
   } else {
     handle_result
   }
