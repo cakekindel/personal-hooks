@@ -8,7 +8,7 @@ mod lamb;
 mod notify;
 mod utils;
 
-use app::StaticMutState;
+use app::{StaticMutState, ReadState};
 use utils::*;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -27,38 +27,10 @@ async fn main(event_raw: Value, _: Context) -> Result<Value, AnyError> {
   };
 
   if let Err(err) = handle_result {
-    notify_all(&StaticMutState, &format!("{}", err)).await.and_then(|_| handle::noop())
+    StaticMutState.read()?.notify_all(&format!("{}", err)).await.and_then(|_| handle::noop())
   } else {
     handle_result
   }
-}
-
-pub async fn notify_all(state: &impl app::ReadState,
-                        msg: &str)
-                        -> Result<(), AnyError> {
-  use futures::stream;
-  use stream::StreamExt;
-
-  let notifiers = &state.read().norm()?.notifiers;
-
-  let aggregate_errors = |acc: Result<(), app::Error>,
-                          res: Result<(), notify::Error>|
-   -> Result<(), app::Error> {
-    match (acc, res) {
-      | (Ok(_), Ok(_)) => Ok(()),
-      | (Err(app::Error::Many(errs)), Err(err)) => {
-        Err(errs).tap_err_mut(|errs| errs.push(Box::from(err)))
-      },
-      | (Ok(_), Err(err)) => Err(vec![Box::from(err)]),
-      | (Err(_), _) => unreachable!(),
-    }.map_err(app::Error::Many)
-  };
-
-  futures::stream::iter(notifiers)
-       .then(|ns| async move { ns.notify(msg).await })
-       .fold(Ok(()), |acc, res| async { aggregate_errors(acc, res) })
-       .await
-       .norm()
 }
 
 mod handle {
@@ -83,7 +55,7 @@ mod handle {
 
     match app.integrate_ad_auth.wait_msg() {
       | Some(code_msg) => {
-        super::notify_all(state, code_msg).await?;
+        app.notify_all(code_msg).await?;
 
         Err(app::Error::Other("you're authenticated!".to_string())).norm()
       },

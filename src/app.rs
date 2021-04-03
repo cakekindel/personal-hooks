@@ -3,7 +3,7 @@ use std::{env, future::Future, marker::Send};
 use async_trait::async_trait;
 use thiserror::Error as DeriveError;
 
-use crate::{integrate, notify::Notifier, utils::*};
+use crate::{integrate, notify::Notifier, utils::*, AnyError};
 
 #[derive(Debug, DeriveError)]
 pub enum Error {
@@ -14,10 +14,10 @@ pub enum Error {
   Other(String),
 
   #[error("{0}")]
-  Any(crate::AnyError),
+  Any(AnyError),
 
   #[error("{0:?}")]
-  Many(Vec<crate::AnyError>),
+  Many(Vec<AnyError>),
 }
 
 // EXPLAIN MUT STATIC: want persistent app state across / between executions.
@@ -36,6 +36,33 @@ pub struct App {
   pub integrate_ad_auth:      integrate::ad::Auth,
 }
 
+impl App {
+  pub async fn notify_all(&self, msg: &str)
+                          -> Result<(), AnyError> {
+    use futures::stream;
+    use stream::StreamExt;
+
+    let aggregate_errors = |acc: Result<(), self::Error>,
+                            res: Result<(), crate::notify::Error>|
+     -> Result<(), self::Error> {
+      match (acc, res) {
+        | (Ok(_), Ok(_)) => Ok(()),
+        | (Err(self::Error::Many(errs)), Err(err)) => {
+          Err(errs).tap_err_mut(|errs| errs.push(Box::from(err)))
+        },
+        | (Ok(_), Err(err)) => Err(vec![Box::from(err)]),
+        | (Err(_), _) => unreachable!(),
+      }.map_err(self::Error::Many)
+    };
+
+    futures::stream::iter(&self.notifiers)
+         .then(|ns| async move { ns.notify(msg).await })
+         .fold(Ok(()), |acc, res| async { aggregate_errors(acc, res) })
+         .await
+         .norm()
+  }
+}
+
 pub trait ReadState
   where Self: Sized
 {
@@ -47,12 +74,12 @@ pub trait ModifyState
   where Self: Sized
 {
   fn modify(&self,
-            f: impl FnOnce(App) -> Result<App, crate::AnyError>)
+            f: impl FnOnce(App) -> Result<App, AnyError>)
             -> Result<(), Error>;
 
   /// this is a monstrosity
   async fn modify_async<'a,
-                          R: Send + Future<Output = Result<App, crate::AnyError>>>(
+                          R: Send + Future<Output = Result<App, AnyError>>>(
     &'a self,
     f: impl 'a + Send + FnOnce(App) -> R)
     -> Result<(), Error>;
@@ -72,7 +99,7 @@ impl ReadState for StaticMutState {
 #[async_trait]
 impl ModifyState for StaticMutState {
   fn modify(&self,
-            f: impl FnOnce(App) -> Result<App, crate::AnyError>)
+            f: impl FnOnce(App) -> Result<App, AnyError>)
             -> Result<(), Error> {
     Self::init()?;
 
@@ -88,7 +115,7 @@ impl ModifyState for StaticMutState {
 
   async fn modify_async<'a,
                           R: Send
-                            + Future<Output = Result<App, crate::AnyError>>>(
+                            + Future<Output = Result<App, AnyError>>>(
     &'a self,
     f: impl 'a + Send + FnOnce(App) -> R)
     -> Result<(), Error> {
