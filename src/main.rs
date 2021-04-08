@@ -3,13 +3,15 @@ use serde_json::Value;
 
 mod app;
 mod calendar;
+mod handle;
 mod integrate;
 mod lamb;
 mod notify;
-mod utils;
+mod prelude;
 
-use app::{ReadState, StaticMutState};
-use utils::*;
+use app::{state,
+          state::{Ext, Read}};
+use prelude::*;
 
 type AnyError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
@@ -18,63 +20,54 @@ type AnyError = Box<dyn std::error::Error + Send + Sync + 'static>;
 async fn main(event_raw: Value, _: Context) -> Result<Value, AnyError> {
   use lamb::{Event::*, ScheduleKind::*};
 
-  let event = lamb::Event::from_value(event_raw).norm()?;
+  init_logger()?;
+
+  let event = lamb::Event::from_value(event_raw)
+        .norm()
+        .tap_err(|e| log::error!("Failed to parse event: {:#?}", e))?;
+  log::debug!("Received event: {:#?}", event);
+
+  fn s() -> state::S {
+    match std::env::var("STATE_MODE").ok()
+                                     .as_ref()
+                                     .map(String::as_str)
+    {
+      | Some("FILE") => state::S::File,
+      | _ => state::S::InMem,
+    }
+  }
 
   let handle_result = match event {
-    | Http(req) => handle::http(&StaticMutState, req),
-    | Schedule { kind: RunJobs } => handle::jobs(&StaticMutState).await,
+    | Http(req) => handle::http(&s(), req).await,
+    | Schedule { kind } => handle::summary(&s(), kind).await,
     | _ => handle::noop(),
   };
 
   if let Err(err) = handle_result {
-    StaticMutState.read()?
-                  .notify_all(&format!("{}", err))
-                  .await
-                  .and_then(|_| handle::noop())
+    log::error!("{:#?}", err);
+
+    s().notify("error", &format!("{}", err))
+       .await
+       .tap_err(|e| log::error!("Failed to read app state: {:#?}", e))?;
+
+    handle::noop()
   } else {
     handle_result
   }
 }
 
-mod handle {
-  use serde_json::Value;
-
-  use crate::{app, lamb, utils::*};
-
-  pub fn noop() -> Result<Value, crate::AnyError> {
-    serde_json::to_value(()).norm()
-  }
-
-  pub async fn jobs(state: &(impl app::ReadState + app::ModifyState))
-                    -> Result<Value, crate::AnyError> {
-    state.modify_async(|mut s| async {
-           s.integrate_ad_auth =
-             s.integrate_ad_auth.authenticate(&s.reqw).await?;
-           Ok(s)
-         })
-         .await?;
-
-    let app = state.read()?;
-
-    match app.integrate_ad_auth.wait_msg() {
-      | Some(code_msg) => {
-        app.notify_all(code_msg).await?;
-
-        Err(app::Error::Other("you're authenticated!".to_string())).norm()
-      },
-      | None => todo!(),
-    }
-  }
-
-  pub fn http(_state: &impl app::ReadState,
-              req: lamb::HttpRequest)
-              -> Result<Value, crate::AnyError> {
-    let headers = std::collections::HashMap::<String, String>::new();
-
-    let res = lamb::HttpResponse { status:  200,
-                                   body:    req.body,
-                                   headers: Some(headers), };
-
-    serde_json::to_value(res).norm()
-  }
+fn init_logger() -> Result<(), fern::InitError> {
+  fern::Dispatch::new().format(|out, message, record| {
+                         out.finish(format_args!(
+      "{}[{}][{}] {}",
+      chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+      record.target(),
+      record.level(),
+      message
+    ))
+                       })
+                       .level(log::LevelFilter::Info)
+                       .chain(std::io::stdout())
+                       .apply()?;
+  Ok(())
 }

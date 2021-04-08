@@ -1,13 +1,15 @@
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 
 pub mod event;
 
-use event::*;
+pub use event::*;
 
-trait Calendar {
-  type Error;
-
-  fn get_events(after: DateTime<Utc>,
-                before: DateTime<Utc>)
-                -> Result<Vec<Event>, Self::Error>;
+#[async_trait]
+pub trait Calendar {
+  async fn get_events(&self,
+                      reqw: &reqwest::Client,
+                      after: DateTime<Utc>,
+                      before: DateTime<Utc>)
+                      -> Result<Vec<Event>, crate::AnyError>;
 }

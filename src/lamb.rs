@@ -20,7 +20,8 @@ impl Event {
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ScheduleKind {
   KeepWarm,
-  RunJobs,
+  SummaryToday,
+  SummaryTomorrow,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -41,12 +42,58 @@ pub struct HttpRequest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HttpResponse {
   #[serde(rename = "statusCode")]
-  pub status:  i32,
+  pub status: i32,
   pub headers: Option<Object>,
-  pub body:    Option<String>,
+  pub body: Option<String>,
+}
+
+impl HttpResponse {
+  pub fn new() -> Self {
+    Self { status: 200,
+           headers: None,
+           body: None }
+  }
+
+  pub fn status(mut self, status: impl Into<i32>) -> Self {
+    self.status = status.into();
+    self
+  }
+
+  pub fn body_json(mut self,
+                   body: impl Serialize)
+                   -> Result<Self, serde_json::Error> {
+    serde_json::to_string(&body).map(|json| {
+                                  self.body(json).header("content-type",
+                                                         "application/json")
+                                })
+  }
+
+  pub fn body(mut self, body: impl ToString) -> Self {
+    self.body = Some(body.to_string());
+    self
+  }
+
+  pub fn headers(mut self, headers: impl Into<Object>) -> Self {
+    self.headers = Some(headers.into());
+    self
+  }
+
+  pub fn header(mut self, k: impl ToString, v: impl ToString) -> Self {
+    if let None = self.headers.as_ref() {
+      self = self.headers(HashMap::new());
+    }
+
+    self.headers
+        .as_mut()
+        .unwrap()
+        .insert(k.to_string(), v.to_string());
+
+    self
+  }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum HttpMethod {
   Get,
   Post,

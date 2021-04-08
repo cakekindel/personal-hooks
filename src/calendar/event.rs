@@ -4,11 +4,11 @@ use chrono::{DateTime, Utc};
 
 #[derive(Debug, PartialEq)]
 pub struct Event {
-  pub cat:    Cat,
-  pub what:   String,
-  pub when:   DateTime<Utc>,
-  pub where_: DateTime<Utc>,
-  pub who:    String,
+  pub cat: Cat,
+  pub title: String,
+  pub time_start: DateTime<Utc>,
+  pub time_end: DateTime<Utc>,
+  pub location: Option<String>,
 }
 
 #[derive(Debug, PartialEq)]

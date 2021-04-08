@@ -17,8 +17,8 @@ package:
 
 custom:
   rust:
-    dockerless: true
-
+    dockerImage: 'cakekindel/lambda-rust'
+    dockerTag: '0.3.0-rust-1.51.0'
   serverless-offline:
     noPrependStageInUrl: true
 
@@ -27,8 +27,8 @@ functions:
     handler: hooks_lambda
     events:
       - http:
-          method: '*'
-          path: '*'
+          method: 'any'
+          path: '/{any+}'
       - schedule:
           rate: 'rate(30 minutes)'
           input: {kind: 'RunJobs'}
